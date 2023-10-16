@@ -29,10 +29,10 @@ public class UserController {
     }
 
 
-    @GetMapping("/search")
+    @GetMapping("/birthdate/{fromDate}/{toDate}")
     public ResponseEntity<List<User>> searchUsersByBirthDateRange(
-            @RequestParam @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate fromDate,
-            @RequestParam @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate toDate) {
+            @PathVariable @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate fromDate,
+            @PathVariable @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate toDate) {
 
         List<User> users = userService.getUsersByBirthDateRange(fromDate, toDate);
 
