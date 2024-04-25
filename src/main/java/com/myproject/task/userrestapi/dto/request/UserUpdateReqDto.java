@@ -1,31 +1,31 @@
 package com.myproject.task.userrestapi.dto.request;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.myproject.task.userrestapi.validation.annotation.NotBlankIfNotNull;
-import jakarta.validation.constraints.*;
+import com.myproject.task.userrestapi.validation.annotation.user.BirthDateConstraints;
+import com.myproject.task.userrestapi.validation.annotation.user.EmailConstraints;
+import com.myproject.task.userrestapi.validation.annotation.user.FirstNameConstraints;
+import com.myproject.task.userrestapi.validation.annotation.user.LastNameConstraints;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserFieldsUpdateReqDto {
+public class UserUpdateReqDto {
 
-    @NotBlankIfNotNull
-    @Email(message = "E-mail have to be valid.")
+    @EmailConstraints
     private String email;
 
-    @NotBlankIfNotNull
+    @FirstNameConstraints
     private String firstName;
 
-    @NotBlankIfNotNull
+    @LastNameConstraints
     private String lastName;
 
-    @Past(message = "Birth date must be in the past.")
+    @BirthDateConstraints
     @JsonFormat(pattern="dd-MM-yyyy")
     private LocalDate birthDate;
 
