@@ -1,15 +1,14 @@
 package com.myproject.task.userrestapi.validation.validator;
 
-import com.myproject.task.userrestapi.validation.annotation.AgeConstraint;
+import com.myproject.task.userrestapi.validation.annotation.MinAge;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 
-@Component
-public class AgeValidator implements ConstraintValidator<AgeConstraint, LocalDate> {
+
+public class MinAgeValidator implements ConstraintValidator<MinAge, LocalDate> {
 
     @Value("${user.age.min}")
     private int minAge;
@@ -20,8 +19,7 @@ public class AgeValidator implements ConstraintValidator<AgeConstraint, LocalDat
         if (value == null) {
             return true;
         }
-        LocalDate today = LocalDate.now();
-        LocalDate minDate = today.minusYears(minAge);
+        LocalDate minDate = LocalDate.now().minusYears(minAge);
 
         return minDate.isAfter(value);
     }
