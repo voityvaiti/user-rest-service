@@ -1,6 +1,7 @@
 package com.myproject.task.userrestapi.dto.request;
 
-import com.myproject.task.userrestapi.validation.annotation.UserAgeConstraint;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.myproject.task.userrestapi.validation.annotation.MinAge;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,21 +14,15 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class UserFieldsUpdateReq {
 
-    @Null
-    @NotBlank(message = "E-mail can't be blank.")
     @Email(message = "E-mail have to be valid.")
     private String email;
 
-    @Null
-    @NotBlank(message = "First name can't be blank.")
     private String firstName;
 
-    @Null
-    @NotBlank(message = "Last name can't be blank.")
     private String lastName;
 
-    @Null
-    @UserAgeConstraint
+    @MinAge
+    @JsonFormat(pattern="dd-MM-yyyy")
     private LocalDate birthDate;
 
     private String address;

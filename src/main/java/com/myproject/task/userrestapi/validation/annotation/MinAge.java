@@ -1,20 +1,18 @@
-package com.myproject.task.userrestapi.validator.annotation;
+package com.myproject.task.userrestapi.validation.annotation;
 
-import com.myproject.task.userrestapi.validator.UserAgeValidator;
+import com.myproject.task.userrestapi.validation.validator.AgeValidator;
 import jakarta.validation.Constraint;
 import jakarta.validation.Payload;
 
 import java.lang.annotation.*;
 
-@Documented
 
-
-@Constraint(validatedBy = UserAgeValidator.class)
 @Target( { ElementType.METHOD, ElementType.FIELD })
+@Constraint(validatedBy = AgeValidator.class)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface UserAgeConstraint {
+public @interface AgeConstraint {
 
-    String message() default "You are too young.";
+    String message() default "Too young.";
 
     Class<?>[] groups() default {};
 

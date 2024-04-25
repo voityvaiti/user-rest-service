@@ -1,8 +1,9 @@
 package com.myproject.task.userrestapi.dto.request;
 
-import com.myproject.task.userrestapi.validation.annotation.UserAgeConstraint;
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.myproject.task.userrestapi.validation.annotation.MinAge;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,18 +16,19 @@ import java.time.LocalDate;
 @NoArgsConstructor
 public class UserReqDto {
 
-    @NotEmpty(message = "E-mail is required.")
+    @NotBlank(message = "E-mail is required.")
     @Email(message = "E-mail have to be valid.")
     private String email;
 
-    @NotEmpty(message = "First name is required.")
+    @NotBlank(message = "First name is required.")
     private String firstName;
 
-    @NotEmpty(message = "Last name is required.")
+    @NotBlank(message = "Last name is required.")
     private String lastName;
 
     @NotNull(message = "Birth date is required.")
-    @UserAgeConstraint
+    @MinAge
+    @JsonFormat(pattern="dd-MM-yyyy")
     private LocalDate birthDate;
 
     private String address;
