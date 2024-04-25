@@ -16,10 +16,10 @@ public class UserAgeValidator implements ConstraintValidator<UserAgeConstraint, 
 
     @Override
     public boolean isValid(LocalDate value, ConstraintValidatorContext context) {
+
         if (value == null) {
             return true;
         }
-
         LocalDate today = LocalDate.now();
         LocalDate minDate = today.minusYears(minAge);
 

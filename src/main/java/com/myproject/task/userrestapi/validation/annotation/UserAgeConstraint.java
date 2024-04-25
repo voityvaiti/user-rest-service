@@ -7,11 +7,17 @@ import jakarta.validation.Payload;
 import java.lang.annotation.*;
 
 @Documented
+
+
 @Constraint(validatedBy = UserAgeValidator.class)
 @Target( { ElementType.METHOD, ElementType.FIELD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface UserAgeConstraint {
-    String message() default "Try again when you grow up :)";
+
+    String message() default "You are too young.";
+
     Class<?>[] groups() default {};
+
     Class<? extends Payload>[] payload() default {};
+
 }
