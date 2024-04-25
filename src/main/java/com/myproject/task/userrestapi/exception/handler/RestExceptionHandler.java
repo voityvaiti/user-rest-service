@@ -1,38 +1,32 @@
 package com.myproject.task.userrestapi.exception.handler;
 
 import com.myproject.task.userrestapi.exception.*;
-import jakarta.validation.ValidationException;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.context.request.WebRequest;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
+import java.util.stream.Collectors;
 
-@ControllerAdvice
-public class RestExceptionHandler extends ResponseEntityExceptionHandler {
+@RestControllerAdvice
+public class RestExceptionHandler {
 
-    @ExceptionHandler(value
-            = {ResourceNotFoundException.class})
-    public ResponseEntity<Object> handleResourceNotFoundException(
-            ResourceNotFoundException ex, WebRequest request) {
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ExceptionDetails handleMethodArgumentNotValid(MethodArgumentNotValidException ex) {
 
-        ExceptionDetails exceptionDetails = new ExceptionDetails(
-                LocalDateTime.now(), ex.getMessage(), request.getDescription(false)
-        );
-        return new ResponseEntity<>(exceptionDetails, HttpStatus.NOT_FOUND);
+        String message = ex.getAllErrors().stream().map(DefaultMessageSourceResolvable::getDefaultMessage).collect(Collectors.joining(" "));
+
+        return new ExceptionDetails(LocalDateTime.now(), message);
     }
 
-    @ExceptionHandler(value
-            = {DateRangeException.class, ValidationException.class})
-    public ResponseEntity<Object> handleRequiredFieldsAreEmptyException(
-            RuntimeException ex, WebRequest request) {
+    @ExceptionHandler(ResourceNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public ExceptionDetails handleResourceNotFoundException(ResourceNotFoundException ex) {
 
-        ExceptionDetails exceptionDetails = new ExceptionDetails(
-                LocalDateTime.now(), ex.getMessage(), request.getDescription(false)
-        );
-        return new ResponseEntity<>(exceptionDetails, HttpStatus.BAD_REQUEST);
+        return new ExceptionDetails(LocalDateTime.now(), ex.getMessage());
     }
 }
