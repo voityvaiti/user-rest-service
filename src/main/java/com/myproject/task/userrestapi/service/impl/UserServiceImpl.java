@@ -1,24 +1,29 @@
 package com.myproject.task.userrestapi.service.impl;
 
 import com.myproject.task.userrestapi.entity.User;
-import com.myproject.task.userrestapi.exception.DateRangeException;
 import com.myproject.task.userrestapi.exception.ResourceNotFoundException;
+import com.myproject.task.userrestapi.mapper.UserMapper;
 import com.myproject.task.userrestapi.repository.UserRepository;
 import com.myproject.task.userrestapi.service.abstraction.UserService;
-import org.apache.commons.lang3.StringUtils;
+import lombok.extern.slf4j.Slf4j;
+import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
+
 
 @Service
+@Slf4j
 public class UserServiceImpl implements UserService {
 
     private static final String NOT_FOUND_BY_ID_MESSAGE = "Not found User by ID: ";
 
     private final UserRepository userRepository;
+
+    private final UserMapper userMapper = Mappers.getMapper(UserMapper.class);
+
 
 
     @Autowired
@@ -26,90 +31,62 @@ public class UserServiceImpl implements UserService {
         this.userRepository = userRepository;
     }
 
+
     public List<User> getUsersByBirthDateRange(LocalDate fromDate, LocalDate toDate) {
 
-        if (fromDate.isAfter(toDate)) {
-            throw new DateRangeException("TO date is less than FROM.");
-        }
+        log.debug("Looking for users between {} and {} birth date.", fromDate, toDate);
 
         return userRepository.findByBirthDateBetween(fromDate, toDate);
     }
 
     @Override
-    public User add(User user) {
+    public User create(User user) {
+
+        log.debug("Saving User: {}", user);
 
         return userRepository.save(user);
     }
 
     @Override
-    public User updateAllFields(Long id, User updatedUser) {
-        Optional<User> optionalUserToUpdate = userRepository.findById(id);
+    public User update(Long id, User updatedUser) {
 
-        if (optionalUserToUpdate.isEmpty()) {
-            throw new ResourceNotFoundException(NOT_FOUND_BY_ID_MESSAGE + id);
-        }
+        log.debug("Looking for User with ID: {} to update: {}", id, updatedUser);
+        User userToUpdate = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND_BY_ID_MESSAGE + id));
 
-        User userToUpdate = optionalUserToUpdate.get();
+        log.debug("Found User to update: {}", userToUpdate);
 
-        userToUpdate.setEmail(updatedUser.getEmail());
-        userToUpdate.setFirstName(updatedUser.getFirstName());
-        userToUpdate.setLastName(updatedUser.getLastName());
-        userToUpdate.setBirthDate(updatedUser.getBirthDate());
-        userToUpdate.setAddress(updatedUser.getAddress());
-        userToUpdate.setTelNumber(updatedUser.getTelNumber());
+        userToUpdate = userMapper.updateFields(updatedUser, userToUpdate);
 
+        log.debug("Saving updated User: {}", userToUpdate);
         return userRepository.save(userToUpdate);
-
     }
 
     @Override
-    public User updateSomeFields(Long id, User updatedUser) {
+    public User updatePresentFields(Long id, User updatedUser) {
 
-        Optional<User> optionalUserToUpdate = userRepository.findById(id);
+        log.debug("Looking for User with ID: {} to update some fields: {}", id, updatedUser);
+        User userToUpdate = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND_BY_ID_MESSAGE + id));
 
-        if (optionalUserToUpdate.isEmpty()) {
-            throw new ResourceNotFoundException(NOT_FOUND_BY_ID_MESSAGE + id);
-        }
+        log.debug("Found User to update some fields: {}", userToUpdate);
 
-        User userToUpdate = optionalUserToUpdate.get();
+        userToUpdate = userMapper.updateFieldsIfPresent(updatedUser, userToUpdate);
 
-        if (StringUtils.isNotBlank(updatedUser.getEmail())) {
-            userToUpdate.setEmail(updatedUser.getEmail());
-        }
-
-        if (StringUtils.isNotBlank(updatedUser.getFirstName())) {
-            userToUpdate.setFirstName(updatedUser.getFirstName());
-        }
-
-        if (StringUtils.isNotBlank(updatedUser.getLastName())) {
-            userToUpdate.setLastName(updatedUser.getLastName());
-        }
-
-        if (updatedUser.getBirthDate() != null) {
-            userToUpdate.setBirthDate(updatedUser.getBirthDate());
-        }
-
-        if (StringUtils.isNotBlank(updatedUser.getAddress())) {
-            userToUpdate.setAddress(updatedUser.getAddress());
-        }
-
-        if (StringUtils.isNotBlank(updatedUser.getTelNumber())) {
-            userToUpdate.setTelNumber(updatedUser.getTelNumber());
-        }
-
+        log.debug("Saving updated User: {}", userToUpdate);
         return userRepository.save(userToUpdate);
     }
 
     @Override
     public void delete(Long id) {
 
-        Optional<User> optionalUserToUpdate = userRepository.findById(id);
+        log.debug("Looking for User to delete with ID: {}", id);
 
-        if (optionalUserToUpdate.isEmpty()) {
-            throw new ResourceNotFoundException(NOT_FOUND_BY_ID_MESSAGE + id);
-        }
+        User userToDelete = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(NOT_FOUND_BY_ID_MESSAGE + id));
 
-        userRepository.deleteById(id);
+        log.info("Removing User: {}", userToDelete);
+        userRepository.delete(userToDelete);
     }
 
 }

@@ -9,11 +9,11 @@ public interface UserService {
 
     List<User> getUsersByBirthDateRange(LocalDate fromDate, LocalDate toDate);
 
-    User add(User user);
+    User create(User user);
 
-    User updateAllFields(Long id, User updatedUser);
+    User update(Long id, User updatedUser);
 
-    User updateSomeFields(Long id, User updtedUser);
+    User updatePresentFields(Long id, User updatedUser);
 
     void delete(Long id);
 
