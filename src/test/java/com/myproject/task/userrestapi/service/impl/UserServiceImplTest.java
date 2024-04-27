@@ -1,10 +1,10 @@
 package com.myproject.task.userrestapi.service.impl;
 
 import com.myproject.task.userrestapi.entity.User;
-import com.myproject.task.userrestapi.exception.DateRangeException;
 import com.myproject.task.userrestapi.exception.ResourceNotFoundException;
 import com.myproject.task.userrestapi.repository.UserRepository;
 import com.myproject.task.userrestapi.service.abstraction.UserService;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,9 +28,24 @@ class UserServiceImplTest {
     UserService userService;
 
 
+    private static final Long id = 435L;
+    private static final User sampleUser = new User();
+
+
+    @BeforeAll
+    static void init() {
+        sampleUser.setEmail("mail@mail.com");
+        sampleUser.setFirstName("Fname");
+        sampleUser.setLastName("Lname");
+        sampleUser.setBirthDate(LocalDate.of(2000, 1, 1));
+        sampleUser.setTelNumber("someNumber");
+    }
+
+
     @Test
-    void getUsersByBirthDateRange_shouldUserList_ifParamsAreValid() {
-        List<User> userList = Arrays.asList(new User(), new User());
+    void getUsersByBirthDateRange_shouldReturnUserList() {
+
+        List<User> userList = Arrays.asList(sampleUser, new User());
 
         LocalDate fromDate = LocalDate.of(2000, 7, 11);
         LocalDate toDate = LocalDate.of(2002, 7, 11);
@@ -43,63 +58,47 @@ class UserServiceImplTest {
     }
 
     @Test
-    void getUsersByBirthDateRange_shouldThrowException_ifParamsAreInvalid() {
+    void create_shouldSaveUser() {
 
-        List<User> userList = Arrays.asList(new User(), new User());
+        when(userRepository.save(sampleUser)).thenReturn(sampleUser);
 
-        LocalDate fromDate = LocalDate.of(2002, 7, 11);
-        LocalDate toDate = LocalDate.of(2000, 7, 11);
+        assertEquals(sampleUser, userService.create(sampleUser));
 
-        when(userRepository.findByBirthDateBetween(fromDate, toDate)).thenReturn(userList);
-
-        assertThrows(DateRangeException.class, () -> userService.getUsersByBirthDateRange(fromDate, toDate));
-
-        verify(userRepository, never()).findByBirthDateBetween(fromDate, toDate);
-
+        verify(userRepository).save(sampleUser);
     }
 
     @Test
-    void add() {
-        User expectedUser = new User();
-        expectedUser.setEmail("mail@mail.com");
-        expectedUser.setFirstName("Fname");
-        expectedUser.setLastName("Lname");
+    void updateAllFields_shouldUpdateAllFields_ifUserWasFound() {
 
+        User currentUser = new User();
+        currentUser.setId(id);
+        currentUser.setEmail("some@mail.com");
+        currentUser.setFirstName("some-fname");
+
+        User updatedUser = new User();
+        updatedUser.setEmail("new@email.com");
+        updatedUser.setFirstName("new-fname");
+
+        User expectedUser = new User();
+        expectedUser.setId(id);
+        expectedUser.setEmail(updatedUser.getEmail());
+        expectedUser.setFirstName(updatedUser.getFirstName());
+
+
+        when(userRepository.findById(id)).thenReturn(Optional.of(currentUser));
         when(userRepository.save(expectedUser)).thenReturn(expectedUser);
 
-        assertEquals(expectedUser, userService.add(expectedUser));
+        assertEquals(expectedUser, userService.update(id, updatedUser));
 
         verify(userRepository).save(expectedUser);
     }
 
     @Test
-    void updateAllFields_shouldUpdateAllFields_ifUserWasFound() {
-        Long id = 5L;
-
-        User currentUser = new User(id, "old email", "fname", "old lname",
-                LocalDate.of(2000, 5, 10), "old address", "telNum");
-
-        User updatedUser = new User(id, "new email", "fname", "new lname",
-                LocalDate.of(2001, 5, 5), "new address", "telNum");
-
-        when(userRepository.findById(id)).thenReturn(Optional.of(currentUser));
-        when(userRepository.save(updatedUser)).thenReturn(updatedUser);
-
-        assertEquals(updatedUser, userService.updateAllFields(id, updatedUser));
-
-        verify(userRepository).save(updatedUser);
-    }
-
-    @Test
     void updateAllFields_shouldThrowException_ifUserWasNotFound() {
-        Long id = 5L;
-
-        User updatedUser = new User(id, "new email", "fname", "new lname",
-                LocalDate.of(2001, 5, 5), "new address", "telNum");
 
         when(userRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> userService.updateAllFields(id, updatedUser));
+        assertThrows(ResourceNotFoundException.class, () -> userService.update(id, sampleUser));
 
         verify(userRepository, never()).save(any());
 
@@ -107,58 +106,58 @@ class UserServiceImplTest {
 
     @Test
     void updateSomeFields_shouldUpdatePresentFields_ifUserWasFound() {
-        Long id = 5L;
 
-        User currentUser = new User(id, "old email", "fname", "old lname",
-                LocalDate.of(2001, 5, 5), "old address", "telNum");
+        User currentUser = new User();
+        currentUser.setId(id);
+        currentUser.setEmail("some@email.com");
+        currentUser.setFirstName("fname");
 
-        User updatedUser = new User(null, "new email", null, "new lname",
-                null, "new address", null);
+        User updatedUser = new User();
+        updatedUser.setEmail("new@email.com");
+        updatedUser.setTelNumber("telNumber");
 
-        User expectedUser = new User(id, "new email", "fname", "new lname",
-                LocalDate.of(2001, 5, 5), "new address", "telNum");
+        User expectedUser = new User();
+        expectedUser.setId(id);
+        expectedUser.setEmail(updatedUser.getEmail());
+        expectedUser.setFirstName(currentUser.getFirstName());
+        expectedUser.setTelNumber(updatedUser.getTelNumber());
+
 
         when(userRepository.findById(id)).thenReturn(Optional.of(currentUser));
         when(userRepository.save(expectedUser)).thenReturn(expectedUser);
 
-        assertEquals(expectedUser, userService.updateSomeFields(id, updatedUser));
+        assertEquals(expectedUser, userService.updatePresentFields(id, updatedUser));
 
         verify(userRepository).save(expectedUser);
     }
 
     @Test
     void updateSomeFields_shouldThrowException_ifUserWasNotFound() {
-        Long id = 5L;
-
-        User updatedUser = new User(null, "new email", null, "new lname",
-                null, "new address", null);
 
         when(userRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> userService.updateSomeFields(id, updatedUser));
+        assertThrows(ResourceNotFoundException.class, () -> userService.updatePresentFields(id, sampleUser));
 
         verify(userRepository, never()).save(any());
     }
 
     @Test
     void delete_shouldDeleteUser_ifUserWasFound() {
-        Long id = 16L;
 
-        when(userRepository.findById(id)).thenReturn(Optional.of(new User()));
+        when(userRepository.findById(id)).thenReturn(Optional.of(sampleUser));
 
         userService.delete(id);
 
-        verify(userRepository).deleteById(id);
+        verify(userRepository).delete(sampleUser);
     }
 
     @Test
     void delete_shouldThrowException_ifUserWasNotFound() {
-        Long id = 16L;
 
         when(userRepository.findById(id)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> userService.delete(id));
 
-        verify(userRepository, never()).deleteById(any());
+        verify(userRepository, never()).delete(any());
     }
 }
