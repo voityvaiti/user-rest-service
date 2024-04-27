@@ -1,212 +1,294 @@
 package com.myproject.task.userrestapi.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.myproject.task.userrestapi.dto.request.UserCreateReqDto;
+import com.myproject.task.userrestapi.dto.request.UserFieldsUpdateReqDto;
+import com.myproject.task.userrestapi.dto.request.UserUpdateReqDto;
+import com.myproject.task.userrestapi.dto.response.UserResDto;
 import com.myproject.task.userrestapi.entity.User;
+import com.myproject.task.userrestapi.mapper.UserMapper;
 import com.myproject.task.userrestapi.service.abstraction.UserService;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.mapstruct.factory.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 
 @WebMvcTest(UserController.class)
-@AutoConfigureMockMvc
 class UserControllerTest {
 
     @Autowired
-    MockMvc mvc;
-
+    private MockMvc mvc;
     @MockBean
     private UserService userService;
 
+    private static final UserMapper userMapper = Mappers.getMapper(UserMapper.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+
+    @Value("${api.prefix}")
+    private String apiPrefix;
+
+
+
+    private static final Long userId = 2512L;
+    private static final User validUser = new User();
+    private static final List<User> userList = List.of(validUser, new User());
+
+
+    private static final LocalDate fromDate = LocalDate.of(2000, 1, 1);
+    private static final LocalDate toDate = LocalDate.of(2005, 1, 1);
+
+
+    private static final UserCreateReqDto validUserCreateReqDto = new UserCreateReqDto();
+    private static final UserUpdateReqDto validUserUpdateReqDto = new UserUpdateReqDto();
+    private static final UserFieldsUpdateReqDto validUserFieldsUpdateReqDto = new UserFieldsUpdateReqDto();
+
+
+
+    @BeforeAll
+    static void init() {
+
+        validUser.setEmail("some@mail.com");
+        validUser.setFirstName("fname");
+        validUser.setLastName("lname");
+        validUser.setBirthDate(LocalDate.of(2000, 1, 1));
+        validUser.setAddress("someAddress");
+
+        validUserCreateReqDto.setEmail(validUser.getEmail());
+        validUserCreateReqDto.setFirstName(validUser.getFirstName());
+        validUserCreateReqDto.setLastName(validUser.getLastName());
+        validUserCreateReqDto.setBirthDate(validUser.getBirthDate());
+
+        validUserUpdateReqDto.setEmail(validUser.getEmail());
+        validUserUpdateReqDto.setFirstName(validUser.getFirstName());
+        validUserUpdateReqDto.setLastName(validUser.getLastName());
+        validUserUpdateReqDto.setBirthDate(validUser.getBirthDate());
+
+        validUserFieldsUpdateReqDto.setAddress("newAddress");
+        validUserFieldsUpdateReqDto.setEmail("new@email.com");
+    }
+
+
     @Test
-    void searchUsersByBirthDateRange() throws Exception {
-        String fromDateStr = "10-05-2000";
-        String toDateStr = "17-10-2002";
+    void getUsersByBirthDateRange_shouldReturnOkStatus() throws Exception {
 
-        LocalDate fromDate = LocalDate.of(2000, 5, 10);
-        LocalDate toDate = LocalDate.of(2002, 10, 17);
+        when(userService.getUsersByBirthDateRange(fromDate, toDate)).thenReturn(userList);
 
-        User expectedUserInList = new User(5L, "email", "fname", "lname",
-                LocalDate.of(2001, 5, 5), "some address", "telNum");
-
-        List<User> mockUsers = new ArrayList<>();
-        mockUsers.add(expectedUserInList);
-
-        when(userService.getUsersByBirthDateRange(fromDate, toDate)).thenReturn(mockUsers);
-
-        mvc.perform(get("/api/v1/users/search")
-                        .param("fromDate", fromDateStr)
-                        .param("toDate", toDateStr)
+        mvc.perform(get(apiPrefix + "/users/birthdate")
+                        .param("from", fromDate.toString())
+                        .param("to", toDate.toString())
                         .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$.[*].id").isNotEmpty())
-                .andExpect(jsonPath("$.[*].email").value(expectedUserInList.getEmail()))
-                .andExpect(jsonPath("$.[*].firstName").value(expectedUserInList.getFirstName()))
-                .andExpect(jsonPath("$.[*].lastName").value(expectedUserInList.getLastName()))
-                .andExpect(jsonPath("$.[*].birthDate").value(expectedUserInList.getBirthDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))))
-                .andExpect(jsonPath("$.[*].address").value(expectedUserInList.getAddress()))
-                .andExpect(jsonPath("$.[*].telNumber").value(expectedUserInList.getTelNumber()));
+                .andExpect(MockMvcResultMatchers.status().isOk());
     }
 
     @Test
-    void create_shouldCreateUser_ifUserFieldsAreValid() throws Exception {
-        User expectedUser = new User();
-        expectedUser.setEmail("mail@mail.com");
-        expectedUser.setFirstName("Fname");
-        expectedUser.setLastName("Lname");
-        expectedUser.setBirthDate(LocalDate.of(2000, 5, 5));
+    void getUsersByBirthDateRange_shouldReturnProperResponse() throws Exception {
 
-        when(userService.add(expectedUser)).thenReturn(expectedUser);
+        List<UserResDto> expectedUserDtoList = userList.stream().map(userMapper::mapToUserResDto).toList();
 
-        String expectedUserInJson = """
-                {
-                    "email": "mail@mail.com",
-                    "firstName": "Fname",
-                    "lastName": "Lname",
-                    "birthDate": "05-05-2000"
-                }
-                """;
+        when(userService.getUsersByBirthDateRange(fromDate, toDate)).thenReturn(userList);
+
+        MvcResult mvcResult = mvc.perform(get(apiPrefix + "/users/birthdate")
+                        .param("from", fromDate.toString())
+                        .param("to", toDate.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andReturn();
+
+        List<UserResDto> actualUserDtoList = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {});
 
 
-        mvc.perform(MockMvcRequestBuilders.post("/api/v1/users")
+        assertEquals(expectedUserDtoList, actualUserDtoList);
+
+        verify(userService).getUsersByBirthDateRange(fromDate, toDate);
+    }
+
+    @Test
+    void getUsersByBirthDateRange_shouldReturnBadRequest_ifDateRangeIsInvalid() throws Exception {
+
+        mvc.perform(get(apiPrefix + "/users/birthdate")
+                        .param("from", toDate.toString())
+                        .param("to", fromDate.toString())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+    }
+
+    @Test
+    void createUser_shouldReturnCreatedStatus_ifUserIsValid() throws Exception {
+
+        User userToCreate = userMapper.mapToUser(validUserCreateReqDto);
+
+        when(userService.create(userToCreate)).thenReturn(validUser);
+
+        mvc.perform(post(apiPrefix + "/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(expectedUserInJson)
-                ).andExpect(status().isCreated())
-                .andExpect(jsonPath("$.email").value(expectedUser.getEmail()))
-                .andExpect(jsonPath("$.firstName").value(expectedUser.getFirstName()))
-                .andExpect(jsonPath("$.lastName").value(expectedUser.getLastName()))
-                .andExpect(jsonPath("$.birthDate").value(expectedUser.getBirthDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))));
-
-        verify(userService).add(expectedUser);
+                        .content(objectMapper.writeValueAsString(validUserCreateReqDto)))
+                .andExpect(MockMvcResultMatchers.status().isCreated());
     }
 
     @Test
-    void create_shouldReturnError_ifUserFieldsAreInvalid() throws Exception {
+    void createUser_shouldReturnProperResponse_ifUserIsValid() throws Exception {
 
-        mvc.perform(MockMvcRequestBuilders.post("/api/v1/users")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {
-                            "email": "mail",
-                            "firstName": "Fname",
-                            "birthDate": "05-05-2010"
-                        }
-                        """)
-        ).andExpect(status().isBadRequest());
+        User userToCreate = userMapper.mapToUser(validUserCreateReqDto);
 
-        verify(userService, never()).add(any());
-    }
+        when(userService.create(userToCreate)).thenReturn(validUser);
+        UserResDto expectedUserResDto = userMapper.mapToUserResDto(validUser);
 
 
-    @Test
-    void updateAllFields_shouldUpdateUser_ifUserFieldsAreValid() throws Exception {
-        Long id = 10L;
-        User expectedUser = new User();
-        expectedUser.setEmail("mail@mail.com");
-        expectedUser.setFirstName("Fname");
-        expectedUser.setLastName("Lname");
-        expectedUser.setBirthDate(LocalDate.of(2000, 5, 5));
-
-        when(userService.updateAllFields(id, expectedUser)).thenReturn(expectedUser);
-
-
-        mvc.perform(MockMvcRequestBuilders.put("/api/v1/users/" + id)
+        MvcResult mvcResult = mvc.perform(post(apiPrefix + "/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "email": "mail@mail.com",
-                                    "firstName": "Fname",
-                                    "lastName": "Lname",
-                                    "birthDate": "05-05-2000"
-                                }
-                                """)
-                ).andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value(expectedUser.getEmail()))
-                .andExpect(jsonPath("$.firstName").value(expectedUser.getFirstName()))
-                .andExpect(jsonPath("$.lastName").value(expectedUser.getLastName()))
-                .andExpect(jsonPath("$.birthDate").value(expectedUser.getBirthDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))));
+                        .content(objectMapper.registerModule(new JavaTimeModule()).writeValueAsString(validUserCreateReqDto)))
+                .andReturn();
 
-        verify(userService).updateAllFields(id, expectedUser);
+        UserResDto actualUserResDto = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {});
+
+
+        assertEquals(expectedUserResDto, actualUserResDto);
+
+        verify(userService).create(userToCreate);
     }
 
     @Test
-    void updateAllFields_shouldNotUpdateUser_ifUserFieldsAreInvalid() throws Exception {
-        Long id = 10L;
+    void createUser_shouldReturnBadRequestStatus_ifUserIsInvalid() throws Exception {
 
-        mvc.perform(MockMvcRequestBuilders.put("/api/v1/users/" + id)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                        {
-                            "email": "mail",
-                            "firstName": "Fname",
-                            "lastName": "Lname",
-                            "birthDate": "05-05-2010"
-                        }
-                        """)
-        ).andExpect(status().isBadRequest());
+        UserCreateReqDto invalidUserCreateReqDto = new UserCreateReqDto(
+                "om", "", "lname", LocalDate.of(2000, 1, 1), "address", "number"
+        );
 
-        verify(userService, never()).updateAllFields(any(), any());
-
-    }
-
-    @Test
-    void updateSomeFields() throws Exception {
-        Long id = 7L;
-
-        User expectedUser = new User();
-        expectedUser.setEmail("mail@mail.com");
-        expectedUser.setFirstName("Fname");
-        expectedUser.setBirthDate(LocalDate.of(2000, 5, 5));
-        expectedUser.setAddress("someaddress");
-
-        when(userService.updateSomeFields(id, expectedUser)).thenReturn(expectedUser);
-
-        mvc.perform(MockMvcRequestBuilders.patch("/api/v1/users/" + id)
+        mvc.perform(post(apiPrefix + "/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "email": "mail@mail.com",
-                                    "firstName": "Fname",
-                                    "birthDate": "05-05-2000",
-                                    "address": "someaddress"
-                                }
-                                """)
-                ).andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value(expectedUser.getEmail()))
-                .andExpect(jsonPath("$.firstName").value(expectedUser.getFirstName()))
-                .andExpect(jsonPath("$.birthDate").value(expectedUser.getBirthDate().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"))))
-                .andExpect(jsonPath("$.address").value(expectedUser.getAddress()));
-
-        verify(userService).updateSomeFields(id, expectedUser);
+                        .content(objectMapper.writeValueAsString(invalidUserCreateReqDto)))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
     }
 
     @Test
-    void delete() throws Exception {
-        Long id = 5L;
+    void update_shouldReturnOkStatus_ifUserIsValid() throws Exception {
 
-        mvc.perform(MockMvcRequestBuilders.delete("/api/v1/users/" + id))
+        User userToUpdate = userMapper.mapToUser(validUserUpdateReqDto);
+
+        when(userService.update(userId, userToUpdate)).thenReturn(validUser);
+
+
+        mvc.perform(put(apiPrefix + "/users/" + userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validUserUpdateReqDto)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    void update_shouldReturnProperResponse_ifUserIsValid() throws Exception {
+
+        User userToUpdate = userMapper.mapToUser(validUserUpdateReqDto);
+
+        when(userService.update(userId, userToUpdate)).thenReturn(validUser);
+        UserResDto expectedUserResDto = userMapper.mapToUserResDto(validUser);
+
+
+        MvcResult mvcResult = mvc.perform(put(apiPrefix + "/users/" + userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validUserUpdateReqDto)))
+                .andReturn();
+
+        UserResDto actualUserResDto = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {});
+
+
+        assertEquals(expectedUserResDto, actualUserResDto);
+
+        verify(userService).update(userId, userToUpdate);
+    }
+
+    @Test
+    void update_shouldReturnBadRequestStatus_ifUserIsInvalid() throws Exception {
+
+        UserUpdateReqDto invalidUserUpdateReqDto = new UserUpdateReqDto(
+                "m", "fname", "", LocalDate.of(2000, 1, 1), "address", "number"
+        );
+
+        mvc.perform(put(apiPrefix + "/users/" + userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidUserUpdateReqDto)))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+    }
+
+    @Test
+    void patch_shouldReturnOkStatus_ifUserFieldsUpdateReqIsValid() throws Exception {
+
+        User userToUpdate = userMapper.mapToUser(validUserFieldsUpdateReqDto);
+
+        when(userService.updatePresentFields(userId, userToUpdate)).thenReturn(validUser);
+
+
+        mvc.perform(patch(apiPrefix + "/users/" + userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validUserFieldsUpdateReqDto)))
+                .andExpect(MockMvcResultMatchers.status().isOk());
+    }
+
+    @Test
+    void patch_shouldReturnProperResponse_ifUserFieldsUpdateReqIsValid() throws Exception {
+
+        User userToUpdate = userMapper.mapToUser(validUserFieldsUpdateReqDto);
+
+        when(userService.updatePresentFields(userId, userToUpdate)).thenReturn(validUser);
+        UserResDto expectedUserResDto = userMapper.mapToUserResDto(validUser);
+
+
+        MvcResult mvcResult = mvc.perform(patch(apiPrefix + "/users/" + userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validUserFieldsUpdateReqDto)))
+                .andReturn();
+
+        UserResDto actualUserResDto = objectMapper.readValue(mvcResult.getResponse().getContentAsString(), new TypeReference<>() {});
+
+
+        assertEquals(expectedUserResDto, actualUserResDto);
+
+        verify(userService).updatePresentFields(userId, userToUpdate);
+    }
+
+    @Test
+    void patch_shouldReturnBadRequestStatus_ifUserFieldsUpdateReqIsInvalid() throws Exception {
+
+        UserFieldsUpdateReqDto invalidUserFieldsUpdateReqDto = new UserFieldsUpdateReqDto();
+        invalidUserFieldsUpdateReqDto.setEmail("invalidEmail");
+
+        mvc.perform(patch(apiPrefix + "/users/" + userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidUserFieldsUpdateReqDto)))
+                .andExpect(MockMvcResultMatchers.status().isBadRequest());
+    }
+
+
+
+    @Test
+    void delete_shouldReturnOkStatus() throws Exception {
+
+        mvc.perform(MockMvcRequestBuilders.delete("/api/v1/users/" + userId))
                 .andExpect(status().isOk());
+    }
 
-        verify(userService).delete(id);
+    @Test
+    void delete_shouldProperlyDeleteUser() throws Exception {
+
+        mvc.perform(MockMvcRequestBuilders.delete("/api/v1/users/" + userId));
+
+        verify(userService).delete(userId);
     }
 }
